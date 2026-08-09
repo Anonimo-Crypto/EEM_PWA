@@ -1,0 +1,15 @@
+EEM - Earnings and Expenses Monitor
+====================================
+
+v1.0.0 - 2026-08-08
+- Primera versión completa
+- Registro de ingresos diarios
+- Categorías de gasto con porcentajes personalizables
+- Distribución automática de ingresos
+- Historial persistente (localStorage)
+- Gráficos de distribución y evolución
+- Exportación / Importación CSV (respaldo y revisión)
+- Modos de importación: todo, día, semana, mes, rango personalizado
+- Diseño limpio con pestañas
+- PWA instalable
+- Soporte de tema claro/oscuro

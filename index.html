@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d9488" />
+  <meta name="description" content="Monitor de ingresos y gastos diarios con distribución por porcentajes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>EEM – Earnings and Expenses Monitor</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="192.png" />
+  <link rel="apple-touch-icon" href="192.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1><span class="logo">E</span> EEM</h1>
+    <div class="header-actions">
+      <button class="icon-btn" id="btnTheme" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg id="iconMoon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- HOY -->
+    <section id="panel-hoy" class="tab-panel active">
+      <div class="card">
+        <div class="card-title">Ingreso de hoy</div>
+        <div class="form-group">
+          <label for="inputEarnings">Cantidad ganada hoy</label>
+          <input type="number" id="inputEarnings" class="input input-lg" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        </div>
+        <div id="todayDate" class="text-center text-muted mb-8" style="font-size:0.85rem;"></div>
+        <button class="btn btn-primary" id="btnSave">Guardar gastos</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          Distribución prevista
+          <span class="badge" id="pctBadge">0 %</span>
+        </div>
+        <ul class="cat-list" id="previewList">
+          <li class="empty-state" style="padding:20px;">Añade categorías primero</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resumen y estimaciones</div>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-box">
+            <div class="stat-label">Promedio diario</div>
+            <div class="stat-value" id="statDaily">—</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Promedio semanal</div>
+            <div class="stat-value" id="statWeekly">—</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Promedio mensual</div>
+            <div class="stat-value" id="statMonthly">—</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Estimación mes</div>
+            <div class="stat-value" id="statEstimate">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORÍAS -->
+    <section id="panel-cats" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Categorías de gasto</div>
+        <div id="pctTotal" class="pct-total bad">Total: 0 % (debe ser 100 %)</div>
+        <ul class="cat-list" id="catList"></ul>
+        <button class="btn btn-outline mt-12" id="btnAddCat" style="width:100%;">+ Añadir categoría</button>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="panel-hist" class="tab-panel">
+      <div class="card">
+        <div class="card-title flex-between">
+          Historial
+          <select id="histFilter" class="select" style="width:auto;padding:6px 10px;font-size:0.85rem;">
+            <option value="all">Todo</option>
+            <option value="month">Este mes</option>
+            <option value="week">Esta semana</option>
+            <option value="day">Hoy</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Ingreso</th>
+                <th>Detalle</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+        <div id="histEmpty" class="empty-state hidden">
+          <p>No hay registros todavía.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRÁFICOS -->
+    <section id="panel-charts" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Distribución total acumulada</div>
+        <div class="chart-container">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Evolución por categoría</div>
+        <div class="chart-container">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- DATOS -->
+    <section id="panel-data" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Exportar CSV</div>
+        <p class="text-muted mb-16" style="font-size:0.85rem;">Descarga un archivo CSV organizado con todo el historial y categorías.</p>
+        <button class="btn btn-primary" id="btnExport">Exportar historial</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Importar CSV</div>
+        <p class="text-muted mb-8" style="font-size:0.85rem;">Elige el modo y el alcance de los datos a importar.</p>
+
+        <div class="form-group">
+          <label>Modo de importación</label>
+          <div class="import-options" id="importModeOptions">
+            <label class="radio-card selected">
+              <input type="radio" name="importMode" value="backup" checked />
+              <div>
+                <div class="label">Respaldo de datos</div>
+                <div class="desc">Restaura historial, categorías y gráficos completos.</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="importMode" value="review" />
+              <div>
+                <div class="label">Revisión de datos</div>
+                <div class="desc">Abre una ventana nueva solo para consultar el período.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Alcance de los datos</label>
+          <div class="import-options" id="importScopeOptions">
+            <label class="radio-card selected">
+              <input type="radio" name="importScope" value="all" checked />
+              <div>
+                <div class="label">1. Importar todos los datos</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="importScope" value="day" />
+              <div>
+                <div class="label">2. Importar datos de este día</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="importScope" value="week" />
+              <div>
+                <div class="label">3. Importar datos de esta semana</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="importScope" value="month" />
+              <div>
+                <div class="label">4. Importar datos de este mes</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="importScope" value="custom" />
+              <div>
+                <div class="label">5. Importar datos a selección (personalizado)</div>
+              </div>
+            </label>
+          </div>
+          <div class="date-range" id="customRange">
+            <div class="form-group">
+              <label for="dateFrom">Desde</label>
+              <input type="date" id="dateFrom" class="input" />
+            </div>
+            <div class="form-group">
+              <label for="dateTo">Hasta</label>
+              <input type="date" id="dateTo" class="input" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="fileImport">Archivo CSV</label>
+          <input type="file" id="fileImport" accept=".csv,text/csv" class="input" />
+        </div>
+        <button class="btn btn-primary" id="btnImport">Importar</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Zona de peligro</div>
+        <p class="text-muted mb-16" style="font-size:0.85rem;">Esta acción elimina permanentemente todo el historial y las categorías.</p>
+        <button class="btn btn-danger" id="btnClearAll" style="width:100%;">Borrar todos los datos</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="hoy">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Hoy
+    </button>
+    <button class="nav-item" data-tab="cats">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Categorías
+    </button>
+    <button class="nav-item" data-tab="hist">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historial
+    </button>
+    <button class="nav-item" data-tab="charts">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Gráficos
+    </button>
+    <button class="nav-item" data-tab="data">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Datos
+    </button>
+  </nav>
+
+  <!-- Modal add/edit category -->
+  <div class="overlay" id="modalCat">
+    <div class="modal">
+      <h2 id="modalCatTitle">Nueva categoría</h2>
+      <div class="form-group">
+        <label for="catName">Nombre</label>
+        <input type="text" id="catName" class="input" placeholder="Ej. Personal, Familia, Moto..." maxlength="40" />
+      </div>
+      <div class="form-group">
+        <label for="catPct">Porcentaje (%)</label>
+        <input type="number" id="catPct" class="input" placeholder="0" min="0" max="100" step="0.1" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="btnCancelCat">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveCat">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>
